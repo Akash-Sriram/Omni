@@ -17,14 +17,6 @@ Instead of installing a dozen different web wrappers or bloated apps, Omni gives
 - ⚡ **100% Kotlin**: Built entirely from the ground up using modern, null-safe Kotlin.
 - 🎨 **Minimalist UI**: No clutter. Just a simple bottom navigation bar to switch between the models you need.
 
-## Building from Source
-Omni is built using the standard Android Gradle toolchain (AGP 8.5+).
-
-```bash
-git clone https://github.com/Akash-Sriram/Omni.git
-cd Omni
-./gradlew clean assembleDebug
-```
 
 ## License
 This app is licensed under the GPLv3. 
