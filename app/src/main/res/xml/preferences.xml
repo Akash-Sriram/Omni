@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory app:title="Providers &amp; UI">
+        
+        <MultiSelectListPreference
+            app:key="enabled_providers"
+            app:title="Enabled Models"
+            app:summary="Choose which AIs appear in the bottom bar"
+            app:entries="@array/provider_names"
+            app:entryValues="@array/provider_keys"
+            app:defaultValue="@array/default_enabled_providers"
+            app:useSimpleSummaryProvider="true" />
+            
+        <ListPreference
+            app:key="default_tab"
+            app:title="Default Startup Tab"
+            app:summary="Which model opens automatically"
+            app:entries="@array/provider_names"
+            app:entryValues="@array/provider_keys"
+            app:defaultValue="CHATGPT"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:key="theme_override"
+            app:title="App Theme"
+            app:summary="Force Dark or Light mode"
+            app:entries="@array/theme_names"
+            app:entryValues="@array/theme_keys"
+            app:defaultValue="SYSTEM"
+            app:useSimpleSummaryProvider="true" />
+            
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Advanced">
+        <SwitchPreferenceCompat
+            app:key="keep_alive_enabled"
+            app:title="Background Keep-Alive"
+            app:summary="Prevents Android from closing your chats in the background"
+            app:defaultValue="false" />
+            
+        <SwitchPreferenceCompat
+            app:key="restricted_mode"
+            app:title="Strict Privacy Blocker"
+            app:summary="Block all third-party tracking domains on the AI sites"
+            app:defaultValue="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Session">
+        <Preference
+            app:key="logout"
+            app:title="Logout (Wipe All Sessions)"
+            app:summary="Clear all cookies and web storage"
+            app:layout="@layout/preference_danger" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
