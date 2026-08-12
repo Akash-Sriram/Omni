@@ -46,6 +46,8 @@ class MainActivity : ComponentActivity() {
 
     private val context: Context = this
     private var restricted = true
+    private var activeProviders: Set<String> = emptySet()
+    private var activeTheme: String = ""
 
     private var mUploadMessage: ValueCallback<Array<Uri>>? = null
 
@@ -86,14 +88,22 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val allProviders = Provider.values().map { it.name }.toSet()
+        val currentEnabledKeys = prefs.getStringSet("enabled_providers", allProviders)?.toSet() ?: allProviders
+        val currentTheme = prefs.getString("theme_override", "SYSTEM") ?: "SYSTEM"
+        
+        if (activeProviders.isNotEmpty() && (currentEnabledKeys != activeProviders || currentTheme != activeTheme)) {
+            recreate()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         
         // Apply theme before view inflation
-        val themeOverride = prefs.getString("theme_override", "SYSTEM")
-        when (themeOverride) {
+        activeTheme = prefs.getString("theme_override", "SYSTEM") ?: "SYSTEM"
+        when (activeTheme) {
             "LIGHT" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
             "DARK" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES)
             else -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
@@ -113,8 +123,8 @@ class MainActivity : ComponentActivity() {
         val defaultTab = Provider.values().find { it.name == defaultTabKey } ?: Provider.CHATGPT
         
         val allProviders = Provider.values().map { it.name }.toSet()
-        val enabledKeys = prefs.getStringSet("enabled_providers", allProviders) ?: allProviders
-        val enabledProviders = Provider.values().filter { enabledKeys.contains(it.name) }.ifEmpty { listOf(Provider.CHATGPT) }
+        activeProviders = prefs.getStringSet("enabled_providers", allProviders)?.toSet() ?: allProviders
+        val enabledProviders = Provider.values().filter { activeProviders.contains(it.name) }.ifEmpty { listOf(Provider.CHATGPT) }
 
         webViewContainer = findViewById(R.id.webview_container)
         providerTabs = findViewById(R.id.provider_tabs)
@@ -140,18 +150,6 @@ class MainActivity : ComponentActivity() {
             providerTabs.addView(btn)
         }
 
-        // Pre-load all enabled providers
-        for (p in enabledProviders) {
-            val wv = createWebViewForProvider(p)
-            wv.visibility = View.GONE
-            webViews[p] = wv
-            webViewContainer.addView(
-                wv,
-                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
-            )
-            wv.loadUrl(p.url)
-        }
-
         // Show default provider (if it's not enabled, fallback to first enabled)
         val initialProvider = if (enabledProviders.contains(defaultTab)) defaultTab else enabledProviders.first()
         switchProvider(initialProvider)
@@ -164,11 +162,21 @@ class MainActivity : ComponentActivity() {
     private fun switchProvider(provider: Provider) {
         webViews.values.forEach { it.visibility = View.GONE }
 
-        val active = webViews[provider]
-        active?.visibility = View.VISIBLE
+        var active = webViews[provider]
+        if (active == null) {
+            active = createWebViewForProvider(provider)
+            webViews[provider] = active
+            webViewContainer.addView(
+                active,
+                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            )
+            active.loadUrl(provider.url)
+        }
+
+        active.visibility = View.VISIBLE
         currentProvider = provider
 
-        active?.evaluateJavascript(
+        active.evaluateJavascript(
             "setTimeout(function() { " +
                     "var input = document.querySelector('textarea, [contenteditable=\"true\"]'); " +
                     "if (input) input.focus(); " +
