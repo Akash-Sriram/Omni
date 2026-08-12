@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var cookieManager: CookieManager
 
     private val context: Context = this
-    private val restricted = true
+    private var restricted = true
 
     private var mUploadMessage: ValueCallback<Array<Uri>>? = null
 
@@ -89,6 +89,16 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        
+        // Apply theme before view inflation
+        val themeOverride = prefs.getString("theme_override", "SYSTEM")
+        when (themeOverride) {
+            "LIGHT" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
+            "DARK" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES)
+            else -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             setTheme(android.R.style.Theme_DeviceDefault_DayNight)
         }
@@ -96,15 +106,28 @@ class MainActivity : ComponentActivity() {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        
+        restricted = prefs.getBoolean("restricted_mode", true)
+        
+        val defaultTabKey = prefs.getString("default_tab", "CHATGPT")
+        val defaultTab = Provider.values().find { it.name == defaultTabKey } ?: Provider.CHATGPT
+        
+        val allProviders = Provider.values().map { it.name }.toSet()
+        val enabledKeys = prefs.getStringSet("enabled_providers", allProviders) ?: allProviders
+        val enabledProviders = Provider.values().filter { enabledKeys.contains(it.name) }.ifEmpty { listOf(Provider.CHATGPT) }
 
         webViewContainer = findViewById(R.id.webview_container)
         providerTabs = findViewById(R.id.provider_tabs)
+
+        findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
 
         // Build tab strip
-        for (p in Provider.values()) {
+        for (p in enabledProviders) {
             val btn = ImageButton(this).apply {
                 setImageResource(p.iconRes)
                 background = null
@@ -117,8 +140,8 @@ class MainActivity : ComponentActivity() {
             providerTabs.addView(btn)
         }
 
-        // Pre-load all providers
-        for (p in Provider.values()) {
+        // Pre-load all enabled providers
+        for (p in enabledProviders) {
             val wv = createWebViewForProvider(p)
             wv.visibility = View.GONE
             webViews[p] = wv
@@ -129,8 +152,9 @@ class MainActivity : ComponentActivity() {
             wv.loadUrl(p.url)
         }
 
-        // Show default provider
-        switchProvider(Provider.CHATGPT)
+        // Show default provider (if it's not enabled, fallback to first enabled)
+        val initialProvider = if (enabledProviders.contains(defaultTab)) defaultTab else enabledProviders.first()
+        switchProvider(initialProvider)
         
         FreeDroidWarn.showWarningOnUpgrade(this, BuildConfig.VERSION_CODE)
     }

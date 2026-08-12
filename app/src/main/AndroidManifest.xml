@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:allowBackup="true"
@@ -23,6 +25,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:theme="@style/Theme.AppCompat.DayNight"
+            android:label="Settings" />
+
+        <service
+            android:name=".KeepAliveService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false" />
+
         <meta-data android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
     </application>
