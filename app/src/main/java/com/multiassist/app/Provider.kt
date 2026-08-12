@@ -40,6 +40,12 @@ enum class Provider(
             "cloudfront.net", // Amazon CloudFront CDN used by DeepSeek
             "challenges.cloudflare.com"
         )
+    ),
+    KIMI(
+        "Kimi", "https://kimi.moonshot.cn/", R.drawable.ic_kimi,
+        listOf(
+            "kimi.moonshot.cn", "moonshot.cn", "moonshotai.com"
+        )
     );
 
     /** Returns true if the given host is allowed for this provider in restricted mode. */
