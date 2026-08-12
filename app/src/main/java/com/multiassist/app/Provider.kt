@@ -44,7 +44,7 @@ enum class Provider(
     KIMI(
         "Kimi", "https://kimi.moonshot.cn/", R.drawable.ic_kimi,
         listOf(
-            "kimi.moonshot.cn", "moonshot.cn", "moonshotai.com"
+            "kimi.moonshot.cn", "moonshot.cn", "moonshotai.com", "kimi.com"
         )
     );
 
