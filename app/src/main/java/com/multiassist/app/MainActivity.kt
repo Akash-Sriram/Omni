@@ -30,9 +30,17 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.webkit.URLUtilCompat
 import org.woheller69.freeDroidWarn.FreeDroidWarn
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.EnumMap
+import java.util.Locale
+import android.provider.MediaStore
+import android.view.HapticFeedbackConstants
 
 class MainActivity : ComponentActivity() {
 
@@ -50,18 +58,27 @@ class MainActivity : ComponentActivity() {
     private var activeTheme: String = ""
 
     private var mUploadMessage: ValueCallback<Array<Uri>>? = null
+    private var mCameraPhotoPath: String? = null
 
     // Activity Result API for file choosing
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         var results: Array<Uri>? = null
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val dataString = result.data?.dataString
-            if (dataString != null) {
-                results = arrayOf(Uri.parse(dataString))
+        if (result.resultCode == Activity.RESULT_OK) {
+            if (result.data == null || result.data?.data == null) {
+                // If there is no data, then we may have taken a photo
+                if (mCameraPhotoPath != null) {
+                    results = arrayOf(Uri.parse(mCameraPhotoPath))
+                }
+            } else {
+                val dataString = result.data?.dataString
+                if (dataString != null) {
+                    results = arrayOf(Uri.parse(dataString))
+                }
             }
         }
         mUploadMessage?.onReceiveValue(results)
         mUploadMessage = null
+        mCameraPhotoPath = null
     }
 
     // Activity Result API for Microphone Permission
@@ -188,12 +205,13 @@ class MainActivity : ComponentActivity() {
 
     // ─── WebView factory ─────────────────────────────────────────────────────
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     private fun createWebViewForProvider(provider: Provider): WebView {
         val webView = WebView(this)
         registerForContextMenu(webView)
 
         cookieManager.setAcceptThirdPartyCookies(webView, true)
+        webView.addJavascriptInterface(OmniBridge(this, webView), "OmniBridge")
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
@@ -212,11 +230,41 @@ class MainActivity : ComponentActivity() {
                 mUploadMessage?.onReceiveValue(null)
                 mUploadMessage = filePathCallback
                 
-                val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                var takePictureIntent: Intent? = null
+                val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                val imageFileName = "JPEG_" + timeStamp + "_"
+                val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                try {
+                    val imageFile = File.createTempFile(imageFileName, ".jpg", storageDir)
+                    mCameraPhotoPath = "file:" + imageFile.absolutePath
+                    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                    if (intent.resolveActivity(packageManager) != null) {
+                        val photoURI: Uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            imageFile
+                        )
+                        intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                        takePictureIntent = intent
+                    }
+                } catch (ex: IOException) {
+                    Log.e(TAG, "Unable to create Image File", ex)
+                }
+
+                val contentSelectionIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "*/*"
                 }
-                fileChooserLauncher.launch(Intent.createChooser(intent, "File Chooser"))
+
+                val intentArray: Array<Intent> = takePictureIntent?.let { arrayOf(it) } ?: arrayOf()
+
+                val chooserIntent = Intent(Intent.ACTION_CHOOSER).apply {
+                    putExtra(Intent.EXTRA_INTENT, contentSelectionIntent)
+                    putExtra(Intent.EXTRA_TITLE, "Choose an action")
+                    putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray)
+                }
+
+                fileChooserLauncher.launch(chooserIntent)
                 return true
             }
 
@@ -264,6 +312,36 @@ class MainActivity : ComponentActivity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                val js = """
+                    (function() {
+                        // 1. Custom UI Injection: Hide annoying banners
+                        const style = document.createElement('style');
+                        style.innerHTML = `
+                            [class*='banner'], [class*='announcement'], 
+                            div:has(> a[href*='upgrade']) { 
+                                display: none !important; 
+                            }
+                        `;
+                        document.head.appendChild(style);
+
+                        // 2. Haptic Feedback Integration
+                        document.body.addEventListener('click', function(e) {
+                            let target = e.target;
+                            while (target != null && target !== document.body) {
+                                if (target.tagName === 'BUTTON' || target.tagName === 'A' || target.getAttribute('role') === 'button') {
+                                    window.OmniBridge.vibrate();
+                                    break;
+                                }
+                                target = target.parentElement;
+                            }
+                        }, true);
+                    })();
+                """.trimIndent()
+                view?.evaluateJavascript(js, null)
+            }
+
             override fun shouldInterceptRequest(
                 view: WebView,
                 request: WebResourceRequest
@@ -319,6 +397,13 @@ class MainActivity : ComponentActivity() {
                             ).show()
                             resetChat()
                         }
+                    } else {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, request.url)
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to open external link", e)
+                        }
                     }
                     return true
                 }
@@ -331,6 +416,9 @@ class MainActivity : ComponentActivity() {
             ) {
                 if (request?.isForMainFrame == true) {
                     Log.w(TAG, "[onReceivedError] ${error.errorCode}: ${error.description} @ ${request.url}")
+                    if (error.errorCode == WebViewClient.ERROR_HOST_LOOKUP || error.errorCode == WebViewClient.ERROR_TIMEOUT || error.errorCode == WebViewClient.ERROR_CONNECT) {
+                        view.loadUrl("file:///android_asset/offline.html")
+                    }
                 }
             }
         }
@@ -479,6 +567,17 @@ class MainActivity : ComponentActivity() {
                         Toast.makeText(this, getString(R.string.url_copied), Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
+        }
+    }
+    
+    // ─── Javascript Interface ────────────────────────────────────────────────
+    
+    inner class OmniBridge(private val context: Context, private val webView: WebView) {
+        @JavascriptInterface
+        fun vibrate() {
+            webView.post {
+                webView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             }
         }
     }
