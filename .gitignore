@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Keystores - NEVER commit these
+*.jks
+*.keystore
+keystore.properties
