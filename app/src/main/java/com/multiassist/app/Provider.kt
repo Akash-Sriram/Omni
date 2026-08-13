@@ -38,14 +38,17 @@ enum class Provider(
         listOf(
             "deepseek.com", // covers chat, api, platform, cdn subdomains
             "cloudfront.net", // Amazon CloudFront CDN used by DeepSeek
-            "challenges.cloudflare.com"
+            "challenges.cloudflare.com",
+            "volces.com", // Volcengine auth/verification used by DeepSeek
+            "aliyuncs.com" // Alibaba Cloud Auth used by DeepSeek
         )
     ),
     KIMI(
         "Kimi", "https://kimi.moonshot.cn/", R.drawable.ic_kimi,
         listOf(
             "kimi.moonshot.cn", "moonshot.cn", "moonshotai.com", "kimi.com",
-            "trustdecision.com", "kimi.link", "volccdn.com"
+            "trustdecision.com", "kimi.link", "volccdn.com", "volcengine.com",
+            "byteoversea.com", "ibyteimg.com", "toutiaocdn.com"
         )
     ),
     PERPLEXITY(
@@ -73,6 +76,7 @@ enum class Provider(
         // Shared Google OAuth + common security domains applied to ALL providers
         val SHARED_DOMAINS = listOf(
             "google.com",
+            "accounts.google.com",
             "gstatic.com",
             "googleapis.com",
             "googleusercontent.com",
