@@ -5,12 +5,37 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <!-- WebView container — each provider's WebView added here programmatically -->
-    <FrameLayout
-        android:id="@+id/webview_container"
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1">
+
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipe_refresh"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <FrameLayout
+                android:id="@+id/webview_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <ImageButton
+            android:id="@+id/fab_voice"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="16dp"
+            android:background="@drawable/fab_background"
+            android:src="@android:drawable/ic_btn_speak_now"
+            android:contentDescription="Voice Input"
+            android:tint="#FFFFFF"
+            android:elevation="6dp" />
+
+    </RelativeLayout>
 
     <!-- Bottom Navigation Bar -->
     <LinearLayout

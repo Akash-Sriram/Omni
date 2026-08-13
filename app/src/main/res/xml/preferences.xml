@@ -57,8 +57,18 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:title="Session"
+        app:title="Session &amp; Backup"
         app:iconSpaceReserved="false">
+        <Preference
+            app:key="export_backup"
+            app:title="Export Encrypted Backup"
+            app:summary="Save encrypted cookies &amp; settings to Downloads"
+            app:iconSpaceReserved="false" />
+        <Preference
+            app:key="import_backup"
+            app:title="Restore Encrypted Backup"
+            app:summary="Load session cookies &amp; preferences from file"
+            app:iconSpaceReserved="false" />
         <Preference
             app:key="logout"
             app:title="Logout (Wipe All Sessions)"

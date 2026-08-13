@@ -40,8 +40,11 @@ import java.util.Date
 import java.util.EnumMap
 import java.util.Locale
 import android.provider.MediaStore
+import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.view.HapticFeedbackConstants
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
@@ -62,6 +65,34 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private var mUploadMessage: ValueCallback<Array<Uri>>? = null
     private var mCameraPhotoPath: String? = null
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+
+    // Activity Result API for Speech Recognition
+    private val speechRecognizerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (!matches.isNullOrEmpty()) {
+                val spokenText = matches[0].replace("'", "\\'").replace("\n", " ")
+                val active = webViews[currentProvider]
+                active?.evaluateJavascript(
+                    """
+                    (function() {
+                        var input = document.querySelector('textarea, [contenteditable="true"]');
+                        if (input) {
+                            if (input.tagName === 'TEXTAREA') {
+                                input.value = (input.value ? input.value + ' ' : '') + '$spokenText';
+                            } else {
+                                input.innerText = (input.innerText ? input.innerText + ' ' : '') + '$spokenText';
+                            }
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.focus();
+                        }
+                    })();
+                    """.trimIndent(), null
+                )
+            }
+        }
+    }
 
     // Activity Result API for file choosing
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -160,6 +191,30 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         webViewContainer = findViewById(R.id.webview_container)
         providerTabs = findViewById(R.id.provider_tabs)
+
+        swipeRefresh = findViewById(R.id.swipe_refresh)
+        swipeRefresh.setOnRefreshListener {
+            val active = webViews[currentProvider]
+            if (active != null) {
+                active.reload()
+            } else {
+                swipeRefresh.isRefreshing = false
+            }
+        }
+
+        val fabVoice = findViewById<ImageButton>(R.id.fab_voice)
+        fabVoice.setOnClickListener {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak your prompt for ${currentProvider.label}...")
+            }
+            try {
+                speechRecognizerLauncher.launch(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Speech recognition not supported on this device.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -414,6 +469,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                swipeRefresh.isRefreshing = false
                 val js = """
                     (function() {
                         // 1. Custom UI Injection: Hide annoying banners
