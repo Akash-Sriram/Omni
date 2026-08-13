@@ -193,7 +193,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         providerTabs = findViewById(R.id.provider_tabs)
 
         swipeRefresh = findViewById(R.id.swipe_refresh)
-        val enablePullToRefresh = prefs.getBoolean("enable_pull_to_refresh", false)
+        val enablePullToRefresh = prefs.getBoolean("enable_pull_to_refresh", true)
         swipeRefresh.isEnabled = enablePullToRefresh
 
         swipeRefresh.setOnRefreshListener {
@@ -632,6 +632,13 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        
+        webView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            if (::swipeRefresh.isInitialized) {
+                swipeRefresh.isEnabled = (scrollY == 0)
+            }
+        }
+        
         return webView
     }
 
