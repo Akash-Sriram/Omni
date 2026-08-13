@@ -66,7 +66,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private var mUploadMessage: ValueCallback<Array<Uri>>? = null
     private var mCameraPhotoPath: String? = null
-    private lateinit var swipeRefresh: SwipeRefreshLayout
 
     // Activity Result API for Speech Recognition
     private val speechRecognizerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -150,15 +149,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Instantly apply voice FAB and pull-to-refresh visibility without app restart
+        // Instantly apply voice FAB visibility without app restart
         val showVoiceFab = sp.getBoolean("show_voice_fab", true)
         findViewById<ImageButton>(R.id.fab_voice)?.visibility = if (showVoiceFab) View.VISIBLE else View.GONE
-
-        val enablePullToRefresh = sp.getBoolean("enable_pull_to_refresh", true)
-        if (::swipeRefresh.isInitialized) {
-            val active = webViews[currentProvider]
-            swipeRefresh.isEnabled = enablePullToRefresh && (active?.scrollY == 0 && active?.canScrollVertically(-1) == false)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -203,29 +196,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         webViewContainer = findViewById(R.id.webview_container)
         providerTabs = findViewById(R.id.provider_tabs)
-
-        swipeRefresh = findViewById(R.id.swipe_refresh)
-        val enablePullToRefresh = prefs.getBoolean("enable_pull_to_refresh", true)
-        swipeRefresh.isEnabled = enablePullToRefresh
-
-        swipeRefresh.setOnChildScrollUpCallback { _, _ ->
-            val active = webViews[currentProvider]
-            if (active != null) {
-                // If webview can scroll up OR down (i.e. user is anywhere in a scrollable page), block swipeRefresh
-                active.canScrollVertically(-1) || active.scrollY > 0
-            } else {
-                false
-            }
-        }
-
-        swipeRefresh.setOnRefreshListener {
-            val active = webViews[currentProvider]
-            if (active != null) {
-                active.reload()
-            } else {
-                swipeRefresh.isRefreshing = false
-            }
-        }
 
         val showVoiceFab = prefs.getBoolean("show_voice_fab", true)
         val fabVoice = findViewById<ImageButton>(R.id.fab_voice)
@@ -496,7 +466,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                swipeRefresh.isRefreshing = false
                 val js = """
                     (function() {
                         // 1. Custom UI Injection: Hide annoying banners
@@ -656,14 +625,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        
-        webView.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-            if (::swipeRefresh.isInitialized && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("enable_pull_to_refresh", true)) {
-                // Only enable refresh if both scrollY is 0 AND cannot scroll up
-                swipeRefresh.isEnabled = (scrollY == 0 && !v.canScrollVertically(-1))
-            }
-        }
-        
         return webView
     }
 
