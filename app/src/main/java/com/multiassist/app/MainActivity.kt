@@ -119,7 +119,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         
@@ -186,6 +185,23 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         // Show default provider (if it's not enabled, fallback to first enabled)
         val initialProvider = if (enabledProviders.contains(defaultTab)) defaultTab else enabledProviders.first()
         switchProvider(initialProvider)
+
+        // Preload remaining enabled AI models in background after short delay for instant switching
+        Handler(mainLooper).postDelayed({
+            for (p in enabledProviders) {
+                if (p != initialProvider && !webViews.containsKey(p)) {
+                    val wv = createWebViewForProvider(p)
+                    wv.visibility = View.GONE
+                    webViews[p] = wv
+                    webViewContainer.addView(
+                        wv,
+                        FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+                    )
+                    wv.loadUrl(p.url)
+                    wv.onPause() // Keep paused in background until user switches to it
+                }
+            }
+        }, 1200)
         
         FreeDroidWarn.showWarningOnUpgrade(this, BuildConfig.VERSION_CODE)
     }
@@ -307,16 +323,58 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 view: WebView, isDialog: Boolean,
                 isUserGesture: Boolean, resultMsg: android.os.Message
             ): Boolean {
-                val popupWebView = WebView(context)
-                popupWebView.settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    setSupportMultipleWindows(true)
-                    userAgentString = modUserAgent()
+                val popupDialog = Dialog(context, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen)
+                
+                val layout = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.MATCH_PARENT
+                    )
                 }
 
-                val popupDialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-                popupDialog.setContentView(popupWebView)
+                // Security & Control Top Bar
+                val topBar = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setBackgroundColor(0xFF1E1E1E.toInt())
+                    setPadding(32, 24, 32, 24)
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+
+                val titleText = android.widget.TextView(context).apply {
+                    text = "🔒 Security Auth Browser"
+                    setTextColor(0xFFFFFFFF.toInt())
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val closeBtn = android.widget.Button(context).apply {
+                    text = "✕"
+                    setTextColor(0xFFFFFFFF.toInt())
+                    setBackgroundColor(0x00000000)
+                    textSize = 18f
+                    setOnClickListener { popupDialog.dismiss() }
+                }
+
+                topBar.addView(titleText)
+                topBar.addView(closeBtn)
+                layout.addView(topBar)
+
+                val popupWebView = WebView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.MATCH_PARENT
+                    )
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        setSupportMultipleWindows(true)
+                        userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+                    }
+                }
+
+                layout.addView(popupWebView)
+                popupDialog.setContentView(layout)
                 popupDialog.show()
 
                 popupWebView.webChromeClient = object : WebChromeClient() {
@@ -324,7 +382,27 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                         popupDialog.dismiss()
                     }
                 }
-                popupWebView.webViewClient = WebViewClient()
+
+                popupWebView.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        if (url != null) {
+                            val host = Uri.parse(url).host ?: ""
+                            titleText.text = "🔒 $host"
+                            
+                            // Auto dismiss micro browser when redirecting back to main provider domain
+                            val isAuthPage = host.contains("google.com") || host.contains("accounts.") || host.contains("auth0.com") || host.contains("appleid") || host.contains("volces.com") || host.contains("volcengine.com")
+                            if (currentProvider.isAllowed(host) && !isAuthPage) {
+                                cookieManager.flush()
+                                popupDialog.dismiss()
+                                view?.postDelayed({
+                                    cookieManager.flush()
+                                    webViews[currentProvider]?.reload()
+                                }, 150)
+                            }
+                        }
+                    }
+                }
 
                 val transport = resultMsg.obj as WebView.WebViewTransport
                 transport.webView = popupWebView
@@ -477,6 +555,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             dm.enqueue(dlRequest)
         }
 
+        @Suppress("DEPRECATION")
         webView.settings.apply {
             javaScriptEnabled = true
             cacheMode = WebSettings.LOAD_DEFAULT
@@ -511,6 +590,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun resetChat() {
         val current = webViews[currentProvider] ?: return
         current.clearCache(true)
@@ -527,15 +607,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 
     fun modUserAgent(): String {
-        val newPrefix = "Mozilla/5.0 (X11; Linux ${System.getProperty("os.arch")})"
-        var newUserAgent = WebSettings.getDefaultUserAgent(context)
-        val prefix = newUserAgent.substring(0, newUserAgent.indexOf(")") + 1)
-        try {
-            newUserAgent = newUserAgent.replace(prefix, newPrefix)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return newUserAgent
+        val defaultUA = WebSettings.getDefaultUserAgent(context)
+        // Strip out "; wv" or "wv" which signals an embedded Android WebView to Cloudflare & OpenAI
+        return defaultUA.replace("; wv", "").replace(" wv", "")
     }
 
     // ─── Back button ─────────────────────────────────────────────────────────
@@ -559,9 +633,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         super.onCreateContextMenu(menu, v, menuInfo)
         val active = webViews[currentProvider] ?: return
         val result = active.hitTestResult
-        var url = ""
         
         if (result.extra != null) {
+            val url: String
             if (result.type == WebView.HitTestResult.IMAGE_TYPE) {
                 url = result.extra!!
                 val source = Uri.parse(url)
