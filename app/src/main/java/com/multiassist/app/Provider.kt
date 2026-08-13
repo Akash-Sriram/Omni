@@ -60,7 +60,8 @@ enum class Provider(
     MISTRAL(
         "Mistral", "https://chat.mistral.ai/", R.drawable.ic_mistral,
         listOf(
-            "mistral.ai", "auth0.com", "challenges.cloudflare.com"
+            "mistral.ai", "auth0.com", "challenges.cloudflare.com",
+            "cloudflareinsights.com", "merge.dev", "intercom.io", "intercomcdn.com"
         )
     );
 
