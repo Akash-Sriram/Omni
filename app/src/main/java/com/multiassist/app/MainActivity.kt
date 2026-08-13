@@ -202,7 +202,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             }
         }
 
+        val showVoiceFab = prefs.getBoolean("show_voice_fab", true)
         val fabVoice = findViewById<ImageButton>(R.id.fab_voice)
+        fabVoice.visibility = if (showVoiceFab) View.VISIBLE else View.GONE
         fabVoice.setOnClickListener {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)

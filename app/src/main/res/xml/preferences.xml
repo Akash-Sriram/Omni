@@ -49,6 +49,13 @@
             app:iconSpaceReserved="false" />
             
         <SwitchPreferenceCompat
+            app:key="show_voice_fab"
+            app:title="Show Floating Mic Button"
+            app:summary="Display the blue voice dictation button on screen"
+            app:defaultValue="true"
+            app:iconSpaceReserved="false" />
+            
+        <SwitchPreferenceCompat
             app:key="restricted_mode"
             app:title="Strict Privacy Blocker"
             app:summary="Block all third-party tracking domains on the AI sites"
