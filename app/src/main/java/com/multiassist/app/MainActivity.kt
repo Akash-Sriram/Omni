@@ -193,6 +193,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         providerTabs = findViewById(R.id.provider_tabs)
 
         swipeRefresh = findViewById(R.id.swipe_refresh)
+        val enablePullToRefresh = prefs.getBoolean("enable_pull_to_refresh", false)
+        swipeRefresh.isEnabled = enablePullToRefresh
+
         swipeRefresh.setOnRefreshListener {
             val active = webViews[currentProvider]
             if (active != null) {

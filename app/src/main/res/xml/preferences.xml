@@ -56,6 +56,13 @@
             app:iconSpaceReserved="false" />
             
         <SwitchPreferenceCompat
+            app:key="enable_pull_to_refresh"
+            app:title="Pull to Refresh"
+            app:summary="Enable top-swipe reload gesture on chats (disabled by default to preserve smooth scrolling)"
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
+            
+        <SwitchPreferenceCompat
             app:key="restricted_mode"
             app:title="Strict Privacy Blocker"
             app:summary="Block all third-party tracking domains on the AI sites"
