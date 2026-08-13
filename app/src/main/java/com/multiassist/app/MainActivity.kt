@@ -257,8 +257,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 }
             }
         }, 1200)
-        
-        FreeDroidWarn.showWarningOnUpgrade(this, BuildConfig.VERSION_CODE)
     }
 
     // ─── Provider switching ───────────────────────────────────────────────────
