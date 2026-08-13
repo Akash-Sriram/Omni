@@ -2,7 +2,9 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <PreferenceCategory app:title="Providers &amp; UI">
+    <PreferenceCategory
+        app:title="Providers &amp; UI"
+        app:iconSpaceReserved="false">
         
         <MultiSelectListPreference
             app:key="enabled_providers"
@@ -11,7 +13,8 @@
             app:entries="@array/provider_names"
             app:entryValues="@array/provider_keys"
             app:defaultValue="@array/default_enabled_providers"
-            app:useSimpleSummaryProvider="true" />
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
             
         <ListPreference
             app:key="default_tab"
@@ -20,7 +23,8 @@
             app:entries="@array/provider_names"
             app:entryValues="@array/provider_keys"
             app:defaultValue="CHATGPT"
-            app:useSimpleSummaryProvider="true" />
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
 
         <ListPreference
             app:key="theme_override"
@@ -29,30 +33,38 @@
             app:entries="@array/theme_names"
             app:entryValues="@array/theme_keys"
             app:defaultValue="SYSTEM"
-            app:useSimpleSummaryProvider="true" />
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
             
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="Advanced">
+    <PreferenceCategory
+        app:title="Advanced"
+        app:iconSpaceReserved="false">
         <SwitchPreferenceCompat
             app:key="keep_alive_enabled"
             app:title="Background Keep-Alive"
             app:summary="Prevents Android from closing your chats in the background"
-            app:defaultValue="false" />
+            app:defaultValue="false"
+            app:iconSpaceReserved="false" />
             
         <SwitchPreferenceCompat
             app:key="restricted_mode"
             app:title="Strict Privacy Blocker"
             app:summary="Block all third-party tracking domains on the AI sites"
-            app:defaultValue="true" />
+            app:defaultValue="true"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="Session">
+    <PreferenceCategory
+        app:title="Session"
+        app:iconSpaceReserved="false">
         <Preference
             app:key="logout"
             app:title="Logout (Wipe All Sessions)"
             app:summary="Clear all cookies and web storage"
-            app:layout="@layout/preference_danger" />
+            app:layout="@layout/preference_danger"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
 </PreferenceScreen>
