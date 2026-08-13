@@ -18,8 +18,8 @@ android {
         applicationId = "com.multiassist.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 250
-        versionName = "2.50"
+        versionCode = 251
+        versionName = "2.51"
     }
 
     signingConfigs {
