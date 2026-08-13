@@ -23,6 +23,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
+import androidx.preference.PreferenceManager
 import android.webkit.*
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -195,6 +196,11 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         swipeRefresh = findViewById(R.id.swipe_refresh)
         val enablePullToRefresh = prefs.getBoolean("enable_pull_to_refresh", true)
         swipeRefresh.isEnabled = enablePullToRefresh
+
+        swipeRefresh.setOnChildScrollUpCallback { _, _ ->
+            val active = webViews[currentProvider]
+            active?.canScrollVertically(-1) ?: false
+        }
 
         swipeRefresh.setOnRefreshListener {
             val active = webViews[currentProvider]
@@ -633,9 +639,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         
-        webView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-            if (::swipeRefresh.isInitialized) {
-                swipeRefresh.isEnabled = (scrollY == 0)
+        webView.setOnScrollChangeListener { v, _, _, _, _ ->
+            if (::swipeRefresh.isInitialized && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("enable_pull_to_refresh", true)) {
+                swipeRefresh.isEnabled = !v.canScrollVertically(-1)
             }
         }
         
