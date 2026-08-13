@@ -199,7 +199,12 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         swipeRefresh.setOnChildScrollUpCallback { _, _ ->
             val active = webViews[currentProvider]
-            active?.canScrollVertically(-1) ?: false
+            if (active != null) {
+                // If webview can scroll up OR down (i.e. user is anywhere in a scrollable page), block swipeRefresh
+                active.canScrollVertically(-1) || active.scrollY > 0
+            } else {
+                false
+            }
         }
 
         swipeRefresh.setOnRefreshListener {
@@ -639,9 +644,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         
-        webView.setOnScrollChangeListener { v, _, _, _, _ ->
+        webView.setOnScrollChangeListener { v, _, scrollY, _, _ ->
             if (::swipeRefresh.isInitialized && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("enable_pull_to_refresh", true)) {
-                swipeRefresh.isEnabled = !v.canScrollVertically(-1)
+                // Only enable refresh if both scrollY is 0 AND cannot scroll up
+                swipeRefresh.isEnabled = (scrollY == 0 && !v.canScrollVertically(-1))
             }
         }
         
