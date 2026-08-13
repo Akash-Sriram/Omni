@@ -40,9 +40,12 @@ import java.util.Date
 import java.util.EnumMap
 import java.util.Locale
 import android.provider.MediaStore
+import android.speech.tts.TextToSpeech
 import android.view.HapticFeedbackConstants
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
+    private var tts: TextToSpeech? = null
+    private var isTtsInitialized = false
 
     private val webViews: MutableMap<Provider, WebView> = EnumMap(Provider::class.java)
     private var currentProvider = Provider.CHATGPT
@@ -116,6 +119,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        tts = TextToSpeech(this, this)
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         
         // Apply theme before view inflation
@@ -141,7 +146,18 @@ class MainActivity : ComponentActivity() {
         
         val allProviders = Provider.values().map { it.name }.toSet()
         activeProviders = prefs.getStringSet("enabled_providers", allProviders)?.toSet() ?: allProviders
-        val enabledProviders = Provider.values().filter { activeProviders.contains(it.name) }.ifEmpty { listOf(Provider.CHATGPT) }
+        
+        val defaultOrder = Provider.values().joinToString(",") { it.name }
+        val savedOrderStr = prefs.getString("provider_order", defaultOrder) ?: defaultOrder
+        val orderedKeys = savedOrderStr.split(",").map { it.trim() }
+        
+        val enabledProviders = Provider.values()
+            .filter { activeProviders.contains(it.name) }
+            .sortedBy { p ->
+                val idx = orderedKeys.indexOf(p.name)
+                if (idx >= 0) idx else Int.MAX_VALUE
+            }
+            .ifEmpty { listOf(Provider.CHATGPT) }
 
         webViewContainer = findViewById(R.id.webview_container)
         providerTabs = findViewById(R.id.provider_tabs)
@@ -177,7 +193,12 @@ class MainActivity : ComponentActivity() {
     // ─── Provider switching ───────────────────────────────────────────────────
 
     private fun switchProvider(provider: Provider) {
-        webViews.values.forEach { it.visibility = View.GONE }
+        webViews.forEach { (p, wv) ->
+            if (p != provider) {
+                wv.visibility = View.GONE
+                wv.onPause()
+            }
+        }
 
         var active = webViews[provider]
         if (active == null) {
@@ -190,6 +211,7 @@ class MainActivity : ComponentActivity() {
             active.loadUrl(provider.url)
         }
 
+        active.onResume()
         active.visibility = View.VISIBLE
         currentProvider = provider
 
@@ -336,7 +358,16 @@ class MainActivity : ComponentActivity() {
                                 }
                                 target = target.parentElement;
                             }
-                        }, true);
+                        // 3. TTS Read-Aloud: Double-tap text or long-press to read response
+                        document.body.addEventListener('dblclick', function(e) {
+                            let text = window.getSelection().toString().trim();
+                            if (!text && e.target) {
+                                text = e.target.innerText || e.target.textContent;
+                            }
+                            if (text && text.length > 2) {
+                                window.OmniBridge.speak(text.substring(0, 4000));
+                            }
+                        });
                     })();
                 """.trimIndent()
                 view?.evaluateJavascript(js, null)
@@ -571,6 +602,19 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            tts?.language = Locale.US
+            isTtsInitialized = true
+        }
+    }
+
+    override fun onDestroy() {
+        tts?.stop()
+        tts?.shutdown()
+        super.onDestroy()
+    }
+
     // ─── Javascript Interface ────────────────────────────────────────────────
     
     inner class OmniBridge(private val context: Context, private val webView: WebView) {
@@ -578,6 +622,20 @@ class MainActivity : ComponentActivity() {
         fun vibrate() {
             webView.post {
                 webView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+            }
+        }
+
+        @JavascriptInterface
+        fun speak(text: String) {
+            if (isTtsInitialized && text.isNotBlank()) {
+                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "OmniTTS")
+            }
+        }
+
+        @JavascriptInterface
+        fun stopSpeaking() {
+            if (isTtsInitialized) {
+                tts?.stop()
             }
         }
     }
