@@ -140,13 +140,24 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     override fun onResume() {
         super.onResume()
-        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         val allProviders = Provider.values().map { it.name }.toSet()
-        val currentEnabledKeys = prefs.getStringSet("enabled_providers", allProviders)?.toSet() ?: allProviders
-        val currentTheme = prefs.getString("theme_override", "SYSTEM") ?: "SYSTEM"
+        val currentEnabledKeys = sp.getStringSet("enabled_providers", allProviders)?.toSet() ?: allProviders
+        val currentTheme = sp.getString("theme_override", "SYSTEM") ?: "SYSTEM"
         
         if (activeProviders.isNotEmpty() && (currentEnabledKeys != activeProviders || currentTheme != activeTheme)) {
             recreate()
+            return
+        }
+
+        // Instantly apply voice FAB and pull-to-refresh visibility without app restart
+        val showVoiceFab = sp.getBoolean("show_voice_fab", true)
+        findViewById<ImageButton>(R.id.fab_voice)?.visibility = if (showVoiceFab) View.VISIBLE else View.GONE
+
+        val enablePullToRefresh = sp.getBoolean("enable_pull_to_refresh", true)
+        if (::swipeRefresh.isInitialized) {
+            val active = webViews[currentProvider]
+            swipeRefresh.isEnabled = enablePullToRefresh && (active?.scrollY == 0 && active?.canScrollVertically(-1) == false)
         }
     }
 
@@ -274,6 +285,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             }
         }, 1200)
     }
+
+
 
     // ─── Provider switching ───────────────────────────────────────────────────
 
