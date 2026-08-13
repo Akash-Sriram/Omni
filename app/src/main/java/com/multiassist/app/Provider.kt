@@ -47,6 +47,18 @@ enum class Provider(
             "kimi.moonshot.cn", "moonshot.cn", "moonshotai.com", "kimi.com",
             "trustdecision.com", "kimi.link", "volccdn.com"
         )
+    ),
+    PERPLEXITY(
+        "Perplexity", "https://www.perplexity.ai/", R.drawable.ic_perplexity,
+        listOf(
+            "perplexity.ai", "pplx.ai", "auth0.com", "challenges.cloudflare.com"
+        )
+    ),
+    MISTRAL(
+        "Mistral", "https://chat.mistral.ai/", R.drawable.ic_mistral,
+        listOf(
+            "mistral.ai", "auth0.com", "challenges.cloudflare.com"
+        )
     );
 
     /** Returns true if the given host is allowed for this provider in restricted mode. */
