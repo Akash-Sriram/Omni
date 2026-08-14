@@ -334,15 +334,13 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 try {
                     val imageFile = File.createTempFile(imageFileName, ".jpg", storageDir)
                     mCameraPhotoPath = "file:" + imageFile.absolutePath
-                    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                    if (intent.resolveActivity(packageManager) != null) {
-                        val photoURI: Uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            imageFile
-                        )
-                        intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
-                        takePictureIntent = intent
+                    val photoURI: Uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        imageFile
+                    )
+                    takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                        putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                     }
                 } catch (ex: IOException) {
                     Log.e(TAG, "Unable to create Image File", ex)
