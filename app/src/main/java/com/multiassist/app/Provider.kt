@@ -50,12 +50,6 @@ enum class Provider(
             "trustdecision.com", "kimi.link", "volccdn.com", "volcengine.com",
             "byteoversea.com", "ibyteimg.com", "toutiaocdn.com"
         )
-    ),
-    PERPLEXITY(
-        "Perplexity", "https://www.perplexity.ai/", R.drawable.ic_perplexity,
-        listOf(
-            "perplexity.ai", "pplx.ai", "auth0.com", "challenges.cloudflare.com"
-        )
     );
 
     /** Returns true if the given host is allowed for this provider in restricted mode. */
