@@ -56,14 +56,6 @@ enum class Provider(
         listOf(
             "perplexity.ai", "pplx.ai", "auth0.com", "challenges.cloudflare.com"
         )
-    ),
-    MISTRAL(
-        "Mistral", "https://chat.mistral.ai/", R.drawable.ic_mistral,
-        listOf(
-            "mistral.ai", "auth0.com", "challenges.cloudflare.com",
-            "cloudflareinsights.com", "merge.dev", "intercom.io", "intercomcdn.com",
-            "sentry.io", "stripe.com", "jsdelivr.net"
-        )
     );
 
     /** Returns true if the given host is allowed for this provider in restricted mode. */
