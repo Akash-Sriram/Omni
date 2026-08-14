@@ -119,10 +119,17 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private val micPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         if (isGranted) {
             Toast.makeText(context, "Microphone permission granted.", Toast.LENGTH_SHORT).show()
-            // We can't automatically grant the pending WebView request easily from here, 
-            // so the user will just need to tap the mic button again.
         } else {
             Toast.makeText(context, "Microphone permission denied.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Activity Result API for Camera Permission
+    private val cameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(context, "Camera permission granted.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Camera permission denied.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -359,13 +366,21 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             }
 
             override fun onPermissionRequest(request: PermissionRequest) {
-                if (request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
-                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                        request.grant(request.resources)
-                    } else {
-                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        request.deny() // Deny for now, user taps again after granting
-                    }
+                val requestedResources = request.resources
+                val hasAudioReq = requestedResources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+                val hasVideoReq = requestedResources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)
+
+                val hasMicPerm = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                val hasCamPerm = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+                var needMic = hasAudioReq && !hasMicPerm
+                var needCam = hasVideoReq && !hasCamPerm
+
+                if (needMic) micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                if (needCam) cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+
+                if (!needMic && !needCam) {
+                    request.grant(requestedResources)
                 } else {
                     request.deny()
                 }
